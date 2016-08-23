@@ -10,7 +10,7 @@ library(gridExtra)
 # This will facilitate dealing with the non-data lines
 #    3 lines of header 
 #    1 line of footer (Averages)
-sar_raw <- readLines("sar3.out")
+sar_raw <- readLines("/home/NA/108752/src/R/r_for_sysadmins/sar3.out")
 
 # This section is here to illustrate one way of separating the
 # character vector into a list to extract elements.  It also

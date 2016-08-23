@@ -1,0 +1,86 @@
+---
+title: "RVTools VMWare Cluster Report"
+author: "Kwan Lowe"
+output: pdf_document
+---
+
+Report Date: `r format(Sys.Date(), format="%B %d %Y")`.
+
+```{r, echo=FALSE}
+ suppressMessages(library(lubridate))
+ suppressMessages(library(dplyr))
+ suppressMessages(library(gridExtra))
+ suppressMessages(library(grid))
+ 
+ clusterName <- "VMWareCluster"
+ rvDataPath <- "rvtools/daily/"
+ rvHostFile      <- paste0(rvDataPath, "RVTools_tabvHost.csv")
+ rvMemoryFile    <- paste0(rvDataPath, "RVTools_tabvMemory.csv")
+ rvDatastoreFile <- paste0(rvDataPath, "RVTools_tabvDatastore.csv")
+
+ setwd("~/src/R/")
+
+ if (file.exists(rvHostFile)){
+   hostData <- read.csv(rvHostFile)
+ }
+
+ storageData <- read.csv(rvDatastoreFile)
+ memoryData <- read.csv(rvMemoryFile)
+
+ linuxClusterData <- filter(hostData, Cluster==clusterName) %>%
+   select(Host, Speed, X..CPU, Cores.per.CPU, X..Cores, 
+          CPU.usage.., X..Memory, Memory.usage.., VMs.per.Core,
+          VM.Used.memory)
+ 
+ linuxClusterData <- dplyr::rename(linuxClusterData, 
+                                 Sockets = X..CPU,
+                                 Cores.per.Socket=Cores.per.CPU,
+                                 Cores = X..Cores,
+                                 Cpu.Usage = CPU.usage.. ,
+                                 Memory.Percentage=Memory.usage..,
+                                 Host.Memory=X..Memory) 
+
+
+ linuxMemoryData <- filter(memoryData, Cluster==clusterName) %>%
+   select(VM, Size.MB, Overhead, Max, Consumed, Consumed.Overhead, Private, Active, Entitlement)
+
+vmMemoryUsed <- sum(linuxMemoryData$Consumed)
+hostMemory   <- sum(linuxClusterData$Host.Memory)
+clusterMemory <- vmMemoryUsed/hostMemory
+
+linuxStorage <- subset(storageData, grepl("Linux", storageData$Name))
+
+linuxStorage <- storageData
+storageTB <- round((sum(linuxStorage$Capacity.MB))/1024/1024)
+provisionedTB <- round(sum(linuxStorage$Provisioned.MB)/1024/1024)
+inUseTB <- round(sum(linuxStorage$In.Use.MB)/1024/1024)
+
+
+
+```
+
+Linux cluster memory capacity is currently at `r round(clusterMemory*100)`% utilization. 
+There is `r round(hostMemory/1024)`GB available in the cluster, of which 
+`r round(vmMemoryUsed/1024)`GB is in use.
+
+Linux storage capacity is currently at `r storageTB `TB, of which 
+`r provisionedTB`TB have been provisioned. There is `r inUseTB`TB in actual use.
+
+There are `r sum(linuxClusterData$Cores)` cores in the cluster, of which 
+`r sum(linuxClusterData$Cpu.Usage)` cores are allocated. There are 
+an average of `r round(mean(linuxClusterData$VMs.per.Core), digits=2)` 
+VM(s) per core. Average CPU usage at the time of this report is
+`r round(mean(linuxClusterData$Cpu.Usage))`% for the cluster.
+
+```{r, echo=FALSE}
+
+mytheme <- gridExtra::ttheme_default(
+    core = list(fg_params=list(cex = 0.8)),
+    colhead = list(fg_params=list(cex = 0.8)),
+    rowhead = list(fg_params=list(cex = 0.8)))
+
+myt <- gridExtra::tableGrob(select(linuxClusterData, Host, Sockets, Cores, 
+                                   Cpu.Usage, Memory.Percentage), theme = mytheme)
+
+grid.draw(myt)
+```
