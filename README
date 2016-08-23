@@ -1,1 +1,8 @@
-report_sar.R	- Example of graphing sar output
+Graphing SAR output
+- Demonstrates data import, plotting
+	report_sar.R	- Example of graphing sar output
+
+Querying RVTools data for VMWare reporting
+- Demonstrates data import, plotting, RMarkdown
+	make_rvtools_example.Rmd
+	rvtools_example.Rmd
