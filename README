@@ -12,3 +12,5 @@ Login with rstudent
 Use "mkpasswd --method=SHA-512" to generate a new hash
   Vagrantfile
   playbook.yml
+
+PDFs of various lectures/demos for this content
