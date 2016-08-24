@@ -1,0 +1,32 @@
+---
+- hosts: all
+  vars: 
+    rstudio_url: https://download2.rstudio.org/rstudio-server-rhel-0.99.903-x86_64.rpm
+    user_pass: $6$2T1m9o7uzNe5/aK$X4CMZ4mw1fXPskcqje.sm8QYLm85jaJP.BVolJyRDf.wOWMcrXi.WOswh7eM1pVP8TCpDBvmd3Ut6tZHOcz/E.
+
+  tasks:
+  - name: "Add user rstudent" 
+    user: name=rstudent comment="R Student" uid=1001 password={{ user_pass }}
+    become: true
+    become_user: root
+
+  - name: "Install epel"
+    yum: name=epel-release state=present 
+    become: true
+    become_user: root
+
+  - name: "Install R"
+    yum: name=R state=present
+    become: true
+    become_user: root
+
+  - name: "Install RStudio"
+    yum: name={{ rstudio_url }} state=present
+    become: true
+    become_user: root
+
+  - name: "Start Rstudio"
+    command: /usr/sbin/rstudio-server start
+    become: true
+    become_user: root
+
