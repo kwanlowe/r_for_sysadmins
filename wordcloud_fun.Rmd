@@ -1,0 +1,57 @@
+---
+title: 'R for SysAdmins: Wordcloud Fun'
+author: "Kwan Lowe"
+date: "8/29/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is another example using Red Hat's Bugzilla database as the data source.
+Not particularly useful but demonstrates another way to scrape data.
+
+```{r main, cache=TRUE}
+library(rvest)
+library(tm)
+library(SnowballC)
+library(wordcloud)
+```
+
+We define a list of words to remove. This is useful for false matches. In this case,
+I remove the search terms and some miscellaneous entries.
+
+```{r customwords, cache=TRUE}
+mywords <- c("Red", "Hat", "libvirt", "support", "RFE")
+```
+
+Next we get the data. The rvest package is useful here to scrape the
+Red Hat Bugzilla webpage. Here, we search for "NEW" entries with the search
+term "libvirt".
+
+```{r getdata, cache=TRUE}
+bugzilla <- html_session("https://bugzilla.redhat.com/buglist.cgi?quicksearch=libvirt&bug_status=NEW")
+bugzillaCorpus <- html_nodes(bugzilla, ".bz_short_desc_column") %>% html_text()
+```
+
+Now we can start cleaning it up. The following lines massage the data by
+removing non-English syntax, punctuation and filler words.
+
+```{r cleandata, cache=TRUE}
+bugzillaCorpus <- Corpus(VectorSource(bugzillaCorpus))
+bugzillaCorpus <- tm_map(bugzillaCorpus, PlainTextDocument)
+
+bugzillaCorpus <- tm_map(bugzillaCorpus, removePunctuation)
+bugzillaCorpus <- tm_map(bugzillaCorpus, removeWords, stopwords('english') )
+bugzillaCorpus <- tm_map(bugzillaCorpus, removeWords, mywords )
+```
+
+Now we generate the wordcloud. Look at the help text for wordcloud to see
+the many options.
+
+```{r wordcloud, cache=TRUE}
+wordcloud(bugzillaCorpus, max.words = 50, random.order = FALSE, scale = c(2, 0.2))
+```
+
+END.
