@@ -18,67 +18,60 @@ meta-package on Debian (Mint, Ubuntu) and Red Hat (RHEL, CentOS) based distribut
 
 On Mint and Ubuntu, the **equivs** package allows building simple meta-packages. 
 Begin by installing equivs:
+ 
+    sudo apt install equivs
 
-```{bash, eval=FALSE}
-sudo apt install equivs
-```
 
 Next, initialize a template control file using the `equivs-control` command:
 
-```{bash, eval=FALSE}
-mkdir kll-r-metapackage
-cd kll-r-metapackage
-equivs-control kll-r-metapackage
-```
+    mkdir kll-r-metapackage
+    cd kll-r-metapackage
+    equivs-control kll-r-metapackage
 
 The above creates a template file. The contents of the file may seem complex at first,
 but we only need to edit a few lines. At minimum, change the `Package:`, `Depends:` and
 `Description:` tags with appropriate entries.
 
-```{bash, eval=FALSE}
-### Commented entries have reasonable defaults.
-### Uncomment to edit them.
-# Source: <source package name; defaults to package name>
-Section: misc
-Priority: optional
-# Homepage: <enter URL here; no default>
-Standards-Version: 3.9.2
-
-Package: kll-r-metapackage
-# Version: <enter version here; defaults to 1.0>
-# Maintainer: Your Name <yourname@example.com>
-# Pre-Depends: <comma-separated list of packages>
-Depends: libxml2-dev,libbz2-dev,liblzma-dev,curl,libcurl4-openssl-dev
-# Recommends: <comma-separated list of packages>
-# Suggests: <comma-separated list of packages>
-# Provides: <comma-separated list of packages>
-# Replaces: <comma-separated list of packages>
-# Architecture: all
-# Multi-Arch: <one of: foreign|same|allowed>
-# Copyright: <copyright file; defaults to GPL2>
-# Changelog: <changelog file; defaults to a generic changelog>
-# Readme: <README.Debian file; defaults to a generic one>
-# Extra-Files: <comma-separated list of additional files for the doc directory>
-# Files: <pair of space-separated paths; First is file to include, second is destination>
-#  <more pairs, if there's more than one file to include. Notice the starting space>
-Description: Installs packages to facilitate building R packages. 
- This meta-package installs several libraries and tools used in R development.
-```
+    ### Commented entries have reasonable defaults.
+    ### Uncomment to edit them.
+    # Source: <source package name; defaults to package name>
+    Section: misc
+    Priority: optional
+    # Homepage: <enter URL here; no default>
+    Standards-Version: 3.9.2
+    
+    Package: kll-r-metapackage
+    # Version: <enter version here; defaults to 1.0>
+    # Maintainer: Your Name <yourname@example.com>
+    # Pre-Depends: <comma-separated list of packages>
+    Depends: libxml2-dev,libbz2-dev,liblzma-dev,curl,libcurl4-openssl-dev
+    # Recommends: <comma-separated list of packages>
+    # Suggests: <comma-separated list of packages>
+    # Provides: <comma-separated list of packages> 
+    # Replaces: <comma-separated list of packages>
+    # Architecture: all
+    # Multi-Arch: <one of: foreign|same|allowed>
+    # Copyright: <copyright file; defaults to GPL2>
+    # Changelog: <changelog file; defaults to a generic changelog>
+    # Readme: <README.Debian file; defaults to a generic one>
+    # Extra-Files: <comma-separated list of additional files for the doc directory>
+    # Files: <pair of space-separated paths; First is file to include, second is destination>
+    #  <more pairs, if there's more than one file to include. Notice the starting space>
+    Description: Installs packages to facilitate building R packages. 
+    This meta-package installs several libraries and tools used in R development.
 
 Once this is done, build the package:
 
-```{bash, eval=FALSE}
-equivs-build kll-r-metapackage
-```
+
+    equivs-build kll-r-metapackage
+
 
 If everything is in order, a new .deb package will be created in current directory. You
 can install this with gdebi or equivalent tool that satisfies dependencies. I.e., don't
 use `dpkg` as this will not pull in the deps.
 
-```{bash, eval=FALSE}
-sudo
-gdebi kll-r-metapackage_1.0_all.deb
-```
+    sudo
+    gdebi kll-r-metapackage_1.0_all.deb
 
 This should pull in all the dependencies automatically. 
 
