@@ -1,0 +1,33 @@
+---
+title: "README"
+author: "Kwan Lowe"
+date: "March 23, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## README
+### Graphing SAR output
+* Demonstrates data import, plotting
+	+ report_sar.R	- Example of graphing sar output
+![Graph of sar cpu data](figures/graph.png)	
+
+### Querying RVTools data for VMWare reporting
+* Demonstrates data import, plotting, RMarkdown
+	+ make_rvtools_example.Rmd
+	+ rvtools_example.Rmd
+
+### Build Rstudio Server in a CentOS 7 VirtualBox
+Login with rstudent
+Use "mkpasswd --method=SHA-512" to generate a new hash
+  Vagrantfile
+  playbook.yml
+
+PDFs of various lectures/demos for this content
+
+RVest examples
+
+
