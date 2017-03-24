@@ -10,7 +10,7 @@ library(ggplot2)
 # This will facilitate dealing with the non-data lines
 #    3 lines of header 
 #    1 line of footer (Averages)
-sar_raw <- readLines("sar_full.out")
+sar_raw <- readLines("tmp/vm-helios-003.sar")
 
 sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
 
@@ -77,7 +77,8 @@ sar_delimiter <- grep("Average", sar_raw)
 
   # We also do the same with lines containing "Average".
   # The grep() returns a vector so we can inline the code... 
-  sar_cpu_raw <- sar_cpu_raw[-(grep("Average", sar_cpu_raw))]
+ # FIX
+  #  sar_cpu_raw <- sar_cpu_raw[-(grep("Average", sar_cpu_raw))]
 
 
   # Next, we clean up all those blank lines in the dataset.
@@ -121,7 +122,11 @@ names(sar_cpu) <- cpu_titles
 # Here, add a new column pTime that's a combination of the Time and MM
 # columns. This is so we can use this with the lubridate package.
 
-sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
+# If sar is using 12-hr format + AM/PM, use this:
+# sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
+
+# If sar is using 24-hr format, use this:
+sar_cpu <- within(sar_cpu, pTime <- paste(Time))
 
 # Though the character vector for holding the date/time is perfectly
 # readable for humans, to use it properly in R we need to convert
@@ -131,14 +136,15 @@ sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
 # Note that we use the %I to indicate a 12-hour format. If %H were 
 # used, it would assume 24hr format and drop the %p specifier.
 
-sar_cpu <- mutate(sar_cpu, pDate = parse_date_time(pTime, "%I%M%S %p", tz="America/New_York"))
+# sar_cpu <- mutate(sar_cpu, pDate = parse_date_time(pTime, "%I%M%S %p", tz="America/New_York"))
+sar_cpu <- mutate(sar_cpu, pDate = parse_date_time(pTime, "%H%M%S", tz="America/New_York"))
 
 # By default, the posixct time stamps gets the current date and time.
 # So we clean this up by using the date info we saved earlier:
 
-year(sar_dat[,"pDate"])  <- year(report_date)
-month(sar_dat[,"pDate"]) <- month(report_date)
-day(sar_dat[,"pDate"])   <- day(report_date)
+year(sar_cpu[,"pDate"])  <- year(report_date)
+month(sar_cpu[,"pDate"]) <- month(report_date)
+day(sar_cpu[,"pDate"])   <- day(report_date)
 
 # Build the plots ====
 # There are multiple CPUs in the dataset, 0-x, all. We pull apart the 
@@ -191,7 +197,7 @@ do.call("grid.arrange", c(cpu_plot, ncol=nCol))
 # Finally, graph it using the lattice graphics package...
 # Here we plot the User vs pDate with data found in sar_cpu.
 
-#xyplot(usr ~ pDate,sar_cpu, type=c("l"))
+xyplot(usr ~ pDate,sar_cpu, type=c("l"))
 
 # Add a title using the main= parameter, substituting the header from 
 # above in sar_title
