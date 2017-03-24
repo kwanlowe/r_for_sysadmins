@@ -1,0 +1,46 @@
+---
+title: "Summarizing AWS Data with R"
+author: "Kwan Lowe"
+date: "March 23, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summarizing AWS Data with R
+
+Amazon Web Services (AWS) lets users spin up servers and storage in seconds. This can come at a cost.
+
+Though there are many existing tools to query AWS data, this shows some quick ways in R to get AWS metrics such as total storage, amemory and CPU. 
+
+### Show total storage for all volumes
+
+The describe_volumes_out.json is the output from:
+```
+  aws ec2 describe-volumes --output=json
+```
+```{r summary_storage}
+library(jsonlite)
+library(varhandle)
+library(xlsx)
+volumes <- fromJSON("tmp/describe_volumes_out.json")
+
+sum(volumes$Volumes$Size)
+```
+
+Finally, output to Excel for the PHBs.
+
+```{r write_excel}
+voldata <- cbind(volumes$Volumes$VolumeId, as.integer(volumes$Volumes$Size), volumes$Volumes$State)
+colnames(voldata) <- c("VolumeId", "Size", "State")
+voldata <- transform(voldata, Size = noquote(Size))
+voldata <- unfactor(voldata)
+
+write.xlsx(voldata, "tmp/volumedata.xlsx")
+
+head(voldata)
+```
+
+## Graphing the data (IN PROGRESS)
