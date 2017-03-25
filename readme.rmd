@@ -32,8 +32,14 @@ Use "mkpasswd --method=SHA-512" to generate a new hash
   Vagrantfile
   playbook.yml
 
+### PDFs
 PDFs of various lectures/demos for this content
 
+* InstallingCausalImpact - Notes on Google's Causal Impact library
+* ParetoChart - 80/20 analysis of help desk tickets
+* R_for_Sysdmins_Slides - User group presentation
+* wordcloud - Misc reporting 
+* WorkingWithSysstat - Sar/Sysstat
 RVest examples
 
 
