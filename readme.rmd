@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 * Demonstrates data import, plotting
 	+ report_sar.R	- Example of graphing sar output
 ![Graph of sar cpu data](figures/graph.png)	
+        + sar_memory.R  - Graph memory
+![Graph of sar memory data](figures/memory_plot.png)	
 
 ### Querying RVTools data for VMWare reporting
 * Demonstrates data import, plotting, RMarkdown
