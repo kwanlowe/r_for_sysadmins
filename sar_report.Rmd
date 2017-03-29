@@ -22,7 +22,7 @@ library(ggplot2)
 # This will facilitate dealing with the non-data lines
 #    3 lines of header 
 #    1 line of footer (Averages)
-sar_raw <- readLines("deepthought.sar")
+sar_raw <- readLines("tmp/cerberus.sar")
 
 sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
 
@@ -89,7 +89,7 @@ sar_delimiter <- grep("Average", sar_raw)
 
   # We also do the same with lines containing "Average".
   # The grep() returns a vector so we can inline the code... 
-  sar_cpu_raw <- sar_cpu_raw[-(grep("Average", sar_cpu_raw))]
+ # sar_cpu_raw <- sar_cpu_raw[-(grep("Average", sar_cpu_raw))]
 
 
   # Next, we clean up all those blank lines in the dataset.
@@ -133,8 +133,8 @@ names(sar_cpu) <- cpu_titles
 # Here, add a new column pTime that's a combination of the Time and MM
 # columns. This is so we can use this with the lubridate package.
 
-sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
-
+# sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
+sar_cpu <- within(sar_cpu, pTime <- paste(Time))
 # Though the character vector for holding the date/time is perfectly
 # readable for humans, to use it properly in R we need to convert
 # it to a Posix date format. Here, we use dplyr::mutate to add
