@@ -55,11 +55,19 @@
     
     # If sar is using 12-hr format + AM/PM, use this:
     # sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
-    sar_memory <- within(sar_memory, pTime <- paste(Time, AM))
+    # sar_memory <- within(sar_memory, pTime <- paste(Time, AM))
     
     # If sar is using 24-hr format, use this:
     # sar_memory <- within(sar_memory, pTime <- paste(Time))
-    
+    if("AM" %in% colnames(sar_memory))
+    {
+      sar_memory <- within(sar_memory, pTime <- paste(Time, AM))
+      print("Here")
+    } else
+    {
+      sar_memory <- within(sar_memory, pTime <- paste(Time))
+      print("now here")
+    }
     # Though the character vector for holding the date/time is perfectly
     # readable for humans, to use it properly in R we need to convert
     # it to a Posix date format. Here, we use dplyr::mutate to add
@@ -68,7 +76,7 @@
     # Note that we use the %I to indicate a 12-hour format. If %H were 
     # used, it would assume 24hr format and drop the %p specifier.
     
-    sar_memory <- mutate(sar_memory, pDate = parse_date_time(pTime, "%H%M%S p!", tz="America/New_York"))  
+    sar_memory <- mutate(sar_memory, pDate = parse_date_time(pTime, c("%H%M%S p!","%H:%M:%S"), tz="America/New_York"))  
     
     gbmemused <- round(sar_memory$kbmemused/1024/1024, digits = 2)
     gbcached <- round(sar_memory$kbcached/1024/1024, digits = 2)
@@ -79,16 +87,47 @@
     sar_memory <- cbind(sar_memory, gbmemused, gbcached, gbmemfree, gbmemavail, gbtotal)
     return(sar_memory)  
   }
-  
+  extract_cpu <- function(rawSarData){
+    # CPU Section ====
+    header_pattern_cpu <- "CPU.*usr.*nice.*sys.*iowait"
+    footer_pattern_cpu <- "^Average.*all"
+    # Find the start of the CPU section, drop into a vector
+    sar_cpu_headers <- grep(header_pattern_cpu, rawSarData)
+    sar_cpu_footers <- grep(footer_pattern_cpu, rawSarData)
+    
+    cpu_firstline <- sar_cpu_headers[1]
+    cpu_lastline <- sar_cpu_footers[1]
+    numLines <- cpu_lastline - cpu_firstline
+    
+    sar_cpu_raw <-sar_raw[cpu_firstline:(cpu_firstline+numLines-1)]
+    sar_cpu_headers_2 <- grep(header_pattern_cpu, sar_cpu_raw)
+    print("loaded sar_cpu_raw")
+    sar_cpu_raw <- sar_cpu_raw[-sar_cpu_headers_2[2:length(sar_cpu_headers_2)]]
+    sar_cpu_raw <- sar_cpu_raw[-(which(sar_cpu_raw[] == ""))]
+    write.table(sar_cpu_raw, "/home/kwan/tmp/outfile.txt")   
+    
+    sar_cpu <- read.table(text=sar_cpu_raw, header=TRUE )
+    
+    rm("sar_cpu_raw")
+
+    cpu_titles <- names(sar_cpu)
+    cpu_titles <- gsub("X.", "", cpu_titles)
+    cpu_titles[1] <- "Time"
+    names(sar_cpu) <- cpu_titles
+    
+    
+  }
   datafile <- file.choose(new=FALSE)
   sar_raw <- readLines(datafile)
   
   sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
   
-  report_date <- ymd(sar_title[2])
-  
+  # report_date <- ymd(sar_title[2])
+  report_date <- parse_date_time(sar_title[2], c("ymd", "mdy"))
   sar_memory <- extract_memory(sar_raw)
   total_memory <- sar_memory$gbtotal[1]
+
+  sar_cpu <- extract_cpu(sar_raw)
   
   # By default, the posixct time stamps gets the current date and time.
   # So we clean this up by using the date info we saved earlier:
@@ -102,7 +141,7 @@
   gbMemUsed_plot <- ggplot(sar_memory, aes(pDate, gbmemused)) + geom_line() + xlab("Time") + ylab("GbMemUsed") + ggtitle("Memory Used")
   gbMemAvail_plot <- 
     ggplot(sar_memory, aes(pDate, gbmemavail)) + 
-    geom_area(fill="darkgreen",alpha=0.7) + 
+    geom_area(fill="lightgreen",alpha=0.9) + 
     xlab("Time") + 
     ylab("MemAvail (GB)") + 
     ggtitle("Available Memory") + 
@@ -110,12 +149,15 @@
 
   memUsedPct_plot <- 
     ggplot(sar_memory, aes(pDate, memused)) + 
-    geom_area(fill="darkgreen", alpha=0.7) + 
+    geom_area( fill="lightgreen", alpha=0.9) + 
     xlab("Time") + 
     ylab("MemUsedPct") + 
     ggtitle("Memory Used Percentage") + 
-    scale_y_continuous(limits=c(0,100))
+    scale_y_continuous(limits=c(0,100)) +
+    scale_color_gradient(low="blue", high="red")
+  
 #  scale_y_continuous(labels = percent_format(), limits=c(0,100))
+#     geom_area(fill="darkgreen", alpha=0.7) + 
   
   kbCached_plot <- ggplot(sar_memory, aes(pDate, kbcached)) + geom_line() + xlab("Time") + ylab("KBCached") + ggtitle("KBCached")
   
