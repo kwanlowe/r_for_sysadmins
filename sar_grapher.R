@@ -5,19 +5,9 @@
   library(ggplot2)
   library(gridExtra)
   library(scales)
-  
-  # (c) 2017 - Kwan L. Lowe
-  # 
-  # The datafile is created by running sar -A > sar_full.out.
-  # There are many options to sar but beyond the scope of this
-  # example report.
-  # Read the input into a raw file first
-  # This will facilitate dealing with the non-data lines
-  #    3 lines of header 
-  #    1 line of footer (Averages)
-  
-  
-  extract_memory <- function(rawSarData){
+
+
+extract_memory <- function(rawSarData){
     # Memory Section ====
     # Find all the "Averages" strings in the sar_raw. This
     # will serve as delimiters to each stanza
@@ -87,13 +77,14 @@
     sar_memory <- cbind(sar_memory, gbmemused, gbcached, gbmemfree, gbmemavail, gbtotal)
     return(sar_memory)  
   }
-  extract_cpu <- function(rawSarData){
+extract_cpu <- function(rawSarData){
     # CPU Section ====
     header_pattern_cpu <- "CPU.*usr.*nice.*sys.*iowait"
     footer_pattern_cpu <- "^Average.*all"
-    # Find the start of the CPU section, drop into a vector
+    # Find the start of the CPU section, drop into a vector ====
     sar_cpu_headers <- grep(header_pattern_cpu, rawSarData)
     sar_cpu_footers <- grep(footer_pattern_cpu, rawSarData)
+    
     
     cpu_firstline <- sar_cpu_headers[1]
     cpu_lastline <- sar_cpu_footers[1]
@@ -105,56 +96,108 @@
     sar_cpu_raw <- sar_cpu_raw[-sar_cpu_headers_2[2:length(sar_cpu_headers_2)]]
     sar_cpu_raw <- sar_cpu_raw[-(which(sar_cpu_raw[] == ""))]
     write.table(sar_cpu_raw, "/home/kwan/tmp/outfile.txt")   
-    
-    sar_cpu <- read.table(text=sar_cpu_raw, header=TRUE )
-    
-    rm("sar_cpu_raw")
 
+    sar_cpu <- read.table(text=sar_cpu_raw, header=TRUE )
     cpu_titles <- names(sar_cpu)
     cpu_titles <- gsub("X.", "", cpu_titles)
     cpu_titles[1] <- "Time"
     names(sar_cpu) <- cpu_titles
-    
+    print(names(sar_cpu))    
+
+    rm("sar_cpu_raw")
+
+    # Create a pTime column containing date ====    
+    if("AM" %in% colnames(sar_cpu))
+    {
+      sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
+    } else
+    {
+      sar_cpu <- within(sar_cpu, pTime <- paste(Time))
+    }
+
+    sar_cpu <- mutate(sar_cpu, pDate = parse_date_time(pTime, "%H%M%S", tz="America/New_York"))
+
+    # Clean up the titles ====    
+    cpu_titles <- names(sar_cpu)
+    cpu_titles <- gsub("X.", "", cpu_titles)
+    cpu_titles[1] <- "Time"
+    names(sar_cpu) <- cpu_titles
+
+    return(sar_cpu)
     
   }
-  datafile <- file.choose(new=FALSE)
-  sar_raw <- readLines(datafile)
-  
-  sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
-  
-  # report_date <- ymd(sar_title[2])
-  report_date <- parse_date_time(sar_title[2], c("ymd", "mdy"))
-  sar_memory <- extract_memory(sar_raw)
-  total_memory <- sar_memory$gbtotal[1]
+cpu_plot <- function(sarCpu){
+    cpu_list <- levels(sarCpu$CPU)
+    cpu_plot <- list()
+    
+    for (i in 1:length(cpu_list)){
+      cpu <- cpu_list[i]
+      #  print(cpu)
+      cpu_subset <- subset(sarCpu, sarCpu$CPU==cpu)
+      print(cpu_subset)
+      report_title <- paste("CPU", cpu)
 
-  sar_cpu <- extract_cpu(sar_raw)
-  
-  # By default, the posixct time stamps gets the current date and time.
-  # So we clean this up by using the date info we saved earlier:
-  
-  year(sar_memory[,"pDate"])  <- year(report_date)
-  month(sar_memory[,"pDate"]) <- month(report_date)
-  day(sar_memory[,"pDate"])   <- day(report_date)
-  
-  
-  kbMemfree_plot <- ggplot(sar_memory, aes(pDate, kbmemfree)) + geom_line() + xlab("Time") + ylab("KBMemFree") + ggtitle("KBMemFree")
-  gbMemUsed_plot <- ggplot(sar_memory, aes(pDate, gbmemused)) + geom_line() + xlab("Time") + ylab("GbMemUsed") + ggtitle("Memory Used")
-  gbMemAvail_plot <- 
-    ggplot(sar_memory, aes(pDate, gbmemavail)) + 
-    geom_area(fill="lightgreen",alpha=0.9) + 
-    xlab("Time") + 
-    ylab("MemAvail (GB)") + 
-    ggtitle("Available Memory") + 
-    scale_y_continuous(limits=c(0,total_memory))
+      myplot <- ggplot(cpu_subset, aes(pDate, sys)) +
+        geom_line() + 
+        xlab("Time") + 
+        ylab("System") +
+        ggtitle(report_title) 
+      
+      cpu_plot[[i]] <- myplot 
+      #  cpu_plot <- list(cpu_plot, list(myplot))
+      plot(myplot)  
+      #  print(paste("length cpu_plot=", length(cpu_plot)))
+    }
+    return(cpu_plot)
+    
+}
 
-  memUsedPct_plot <- 
-    ggplot(sar_memory, aes(pDate, memused)) + 
-    geom_area( fill="lightgreen", alpha=0.9) + 
-    xlab("Time") + 
-    ylab("MemUsedPct") + 
-    ggtitle("Memory Used Percentage") + 
-    scale_y_continuous(limits=c(0,100)) +
-    scale_color_gradient(low="blue", high="red")
+
+# datafile <- file.choose(new=FALSE)
+datafile <- "/home/kwan/Downloads/SAR/10.15.32.18.sar_08.sar"
+sar_raw <- readLines(datafile)
+
+sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
+
+# sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
+report_date <- parse_date_time(sar_title[2], c("ymd", "mdy"))
+
+sar_memory <- extract_memory(sar_raw)
+
+total_memory <- sar_memory$gbtotal[1]
+
+sar_cpu <- extract_cpu(sar_raw)
+
+ 
+# By default, the posixct time stamps gets the current date and time.
+# So we clean this up by using the date info we saved earlier:
+  
+year(sar_memory[,"pDate"])  <- year(report_date)
+month(sar_memory[,"pDate"]) <- month(report_date)
+day(sar_memory[,"pDate"])   <- day(report_date)
+  
+#year(sar_cpu[,"pDate"])  <- year(report_date)
+#month(sar_cpu[,"pDate"]) <- month(report_date)
+#day(sar_cpu[,"pDate"])   <- day(report_date)
+
+kbMemfree_plot <- ggplot(sar_memory, aes(pDate, kbmemfree)) + geom_line() + xlab("Time") + ylab("KBMemFree") + ggtitle("KBMemFree")
+gbMemUsed_plot <- ggplot(sar_memory, aes(pDate, gbmemused)) + geom_line() + xlab("Time") + ylab("GbMemUsed") + ggtitle("Memory Used")
+gbMemAvail_plot <- 
+  ggplot(sar_memory, aes(pDate, gbmemavail)) + 
+  geom_area(fill="lightgreen",alpha=0.9) + 
+  xlab("Time") + 
+  ylab("MemAvail (GB)") + 
+  ggtitle("Available Memory") + 
+  scale_y_continuous(limits=c(0,total_memory))
+
+memUsedPct_plot <- 
+  ggplot(sar_memory, aes(pDate, memused)) + 
+  geom_area( fill="lightgreen", alpha=0.9) + 
+  xlab("Time") + 
+  ylab("MemUsedPct") + 
+  ggtitle("Memory Used Percentage") + 
+  scale_y_continuous(limits=c(0,100)) +
+  scale_color_gradient(low="blue", high="red")
   
 #  scale_y_continuous(labels = percent_format(), limits=c(0,100))
 #     geom_area(fill="darkgreen", alpha=0.7) + 
@@ -177,6 +220,10 @@
   nCol <- floor(sqrt(n))
   do.call("grid.arrange", c(memory_plot, ncol=nCol))
   
+  cpu_graphs <- cpu_plot(sar_cpu)
+  for (i in 1:length(cpu_graphs)){
+    print(cpu_graphs[i])
+  }
   
   # xyplot(usr ~ pDate,sar_cpu, type=c("l"))
   
