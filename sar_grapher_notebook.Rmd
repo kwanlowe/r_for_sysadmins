@@ -18,13 +18,14 @@ knitr::opts_chunk$set(echo = TRUE)
   library(gridExtra)
   library(scales)
   
+
+pdf(file="plot.pdf",width=11,height=8)
 ```
 
-## R Markdown
+## SAR Grapher
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This is a graph of CPU/Memory utilization from SAR (System Activity Report).
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r main, echo=FALSE}
 
@@ -148,6 +149,60 @@ extract_cpu <- function(rawSarData){
 
     return(sar_cpu)
     
+}
+
+extract_cswch <- function(rawSarData){
+    # Context Switch ====
+    header_pattern_cpu <- "proc/s.*cswch/s"
+    footer_pattern_cpu <- "^Average:"
+    # Find the start of the CPU section, drop into a vector ====
+    sar_cpu_headers <- grep(header_pattern_cpu, rawSarData)
+    top_of_section <- sar_cpu_headers[1]
+    
+    section <- (rawSarData[])
+    sar_cpu_footers <- grep(footer_pattern_cpu, rawSarData)
+
+    
+    cpu_firstline <- sar_cpu_headers[1]
+    cpu_lastline <- sar_cpu_footers[1]
+    numLines <- cpu_lastline - cpu_firstline
+    
+    sar_cpu_raw <-sar_raw[cpu_firstline:(cpu_firstline+numLines-1)]
+    sar_cpu_headers_2 <- grep(header_pattern_cpu, sar_cpu_raw)
+    print("loaded sar_cpu_raw")
+    sar_cpu_raw <- sar_cpu_raw[-sar_cpu_headers_2[2:length(sar_cpu_headers_2)]]
+    sar_cpu_raw <- sar_cpu_raw[-(which(sar_cpu_raw[] == ""))]
+    write.table(sar_cpu_raw, "/home/kwan/tmp/outfile.txt")   
+
+    sar_cpu <- read.table(text=sar_cpu_raw, header=TRUE )
+    cpu_titles <- names(sar_cpu)
+    cpu_titles <- gsub("X.", "", cpu_titles)
+    cpu_titles[1] <- "Time"
+    names(sar_cpu) <- cpu_titles
+    print(names(sar_cpu))    
+
+    rm("sar_cpu_raw")
+
+    # Create a pTime column containing date ====    
+    if("AM" %in% colnames(sar_cpu))
+    {
+      sar_cpu <- within(sar_cpu, pTime <- paste(Time, AM))
+    } else
+    {
+      sar_cpu <- within(sar_cpu, pTime <- paste(Time))
+    }
+
+    # sar_cpu <- mutate(sar_cpu, pDate = parse_date_time(pTime, "%H%M%S", tz="America/New_York"))
+    sar_cpu <- mutate(sar_cpu, pDate = parse_date_time(pTime, c("%H%M%S p!","%H:%M:%S"), tz="America/New_York"))  
+
+    # Clean up the titles ====    
+    cpu_titles <- names(sar_cpu)
+    cpu_titles <- gsub("X.", "", cpu_titles)
+    cpu_titles[1] <- "Time"
+    names(sar_cpu) <- cpu_titles
+
+    return(sar_cpu)
+    
   }
 cpu_plot <- function(sarCpu){
     cpu_list <- levels(sarCpu$CPU)
@@ -179,15 +234,46 @@ cpu_plot <- function(sarCpu){
     
 }
 
-
+cpu_plot_both <- function(sarCpu){
+    cpu_list <- levels(sarCpu$CPU)
+    cpu_plot <- list()
+    
+    for (i in 1:length(cpu_list)){
+      cpu <- cpu_list[i]
+      cpu_subset <- subset(sarCpu, sarCpu$CPU==cpu)
+      report_title <- paste("CPU", cpu)
+ 
+      myplot <- ggplot(cpu_subset, aes(pDate, sys)) +
+        geom_line(aes(y=usr, color="usr")) +
+        geom_line(aes(y=sys, color="sys")) +
+        xlab("Time") + 
+        ylab("System") +
+        scale_y_continuous(limits=c(0,1)) +
+        scale_fill_brewer(palette="Spectral") +
+        theme(  panel.background = element_rect(fill = "lightblue", colour = "lightblue", size = 0.5, linetype = "solid"),
+              panel.grid.major = element_line(size = 0.5, linetype = 'solid', colour = "white"), 
+              panel.grid.minor = element_line(size = 0.25, linetype = 'solid', colour = "white"),
+              panel.border = element_rect(colour = "black", fill=NA, size=2)) +
+        ggtitle(report_title) 
+      
+      cpu_plot[[i]] <- myplot 
+      #  cpu_plot <- list(cpu_plot, list(myplot))
+      # plot(myplot)  
+      #  print(paste("length cpu_plot=", length(cpu_plot)))
+    }
+    return(cpu_plot)
+    
+}
 # datafile <- file.choose(new=FALSE)
-datafile <- "/home/kwan/Downloads/SAR/vm-helios-003.sar"
+datafile <- "/home/kwan/Downloads/SAR/kll.sar"
 sar_raw <- readLines(datafile)
 
-sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
-
 # sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
-report_date <- parse_date_time(sar_title[2], c("ymd", "mdy"))
+sar_title <- sar_raw[1] %>% strsplit("[[:blank:]]")
+# sar_title <- sar_raw[1] %>% strsplit("\t") %>% unlist()
+report_date <- parse_date_time(sar_title[[1]][5], c("ymd", "mdy"))
+report_hostname <- parse_date_time(sar_title[[1]][3], c("ymd", "mdy")) %>% gsub("()", "")
+
 
 sar_memory <- extract_memory(sar_raw)
 
@@ -274,7 +360,7 @@ memUsedPct_plot <-
   nCol <- floor(sqrt(n))
   do.call("grid.arrange", c(memory_plot, ncol=nCol))
   
-  cpu_graphs <- cpu_plot(sar_cpu)
+  cpu_graphs <- cpu_plot_both(sar_cpu)
   for (i in 1:length(cpu_graphs)){
     print(cpu_graphs[i])
   }
@@ -285,12 +371,3 @@ memUsedPct_plot <-
 
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
